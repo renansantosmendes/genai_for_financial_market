@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 import warnings
 import random
 import os
-from genai_for_financial_market.vae.visualization import (
+from visualization import (
     plot_training_curves,
     compare_distributions,
     create_candlestick_chart,
