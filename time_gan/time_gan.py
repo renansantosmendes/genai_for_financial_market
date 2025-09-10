@@ -516,19 +516,10 @@ print(f"Real  : min={real_vals.min():.6f} max={real_vals.max():.6f}")
 print(f"Synth : min={synth_vals.min():.6f} max={synth_vals.max():.6f}")
 
 
-
-# Assumindo que os modelos já estão treinados (E, R, G, S) e o scaler está disponível
-# Se não estiver, descomente e ajuste as linhas abaixo:
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# SEQ_LEN = 24
-# Z_dim = 24
-# F = 1  # número de features
-
 def sample_Z(batch_size, seq_len, z_dim, device, seed=None):
     """Gerar ruído aleatório para o gerador com controle de seed"""
     if seed is not None:
         torch.manual_seed(seed)
-    # Usar diferentes tipos de distribuições para mais diversidade
     z = torch.randn(batch_size, seq_len, z_dim, device=device)
     return z
 
@@ -547,10 +538,8 @@ def generate_synthetic_batch(n_samples, seq_len, batch_size=64, add_noise=True, 
     print(f"  Temperature: {temperature}")
     print(f"  Add noise: {add_noise}")
 
-    # Colocar modelos em modo de avaliação mas com dropout ativo se necessário
     E.eval(); R.eval(); G.eval(); S.eval()
 
-    # Para garantir diversidade, podemos ativar dropout mesmo em eval
     if hasattr(G, 'training'):
         G.train()  # Manter dropout ativo para mais diversidade
     if hasattr(S, 'training'):
@@ -558,7 +547,6 @@ def generate_synthetic_batch(n_samples, seq_len, batch_size=64, add_noise=True, 
 
     all_synthetic = []
 
-    # Usar seeds diferentes para cada batch
     np.random.seed(None)  # Reset seed
     torch.manual_seed(np.random.randint(0, 10000))
 
@@ -566,34 +554,26 @@ def generate_synthetic_batch(n_samples, seq_len, batch_size=64, add_noise=True, 
         current_batch_size = min(batch_size, n_samples - i)
 
         with torch.no_grad():
-            # Gerar ruído com seed único para cada batch
             batch_seed = np.random.randint(0, 100000)
             z = sample_Z(current_batch_size, seq_len, Z_dim, device, seed=batch_seed)
 
-            # Aplicar temperature scaling ao ruído
             z = z * temperature
 
-            # Adicionar ruído extra se solicitado
             if add_noise:
                 noise_scale = 0.1
                 extra_noise = torch.randn_like(z) * noise_scale
                 z = z + extra_noise
 
-            # Passar pelo gerador
             h_fake = G(z)
 
-            # Adicionar pequeno ruído ao estado oculto para mais diversidade
             if add_noise:
                 h_noise = torch.randn_like(h_fake) * 0.05
                 h_fake = h_fake + h_noise
 
-            # Passar pelo supervisor
             h_supervised = S(h_fake)
 
-            # Reconstruir séries temporais
             x_fake = R(h_supervised)
 
-            # Adicionar ruído final muito pequeno (opcional)
             if add_noise:
                 final_noise = torch.randn_like(x_fake) * 0.01
                 x_fake = x_fake + final_noise
@@ -603,18 +583,14 @@ def generate_synthetic_batch(n_samples, seq_len, batch_size=64, add_noise=True, 
             if (i // batch_size + 1) % 10 == 0:
                 print(f"  Batch {i//batch_size + 1}/{(n_samples-1)//batch_size + 1} concluído")
 
-    # Concatenar todos os batches
     synthetic_data = np.concatenate(all_synthetic, axis=0)
 
-    # Verificar diversidade antes da desnormalização
     print(f"  Variância dos dados sintéticos (normalizado): {synthetic_data.var():.6f}")
     print(f"  Range dos dados sintéticos: {synthetic_data.min():.6f} a {synthetic_data.max():.6f}")
 
-    # Inverter normalização
     synth_2d = synthetic_data.reshape(-1, F)
     synth_original = scaler.inverse_transform(synth_2d).reshape(n_samples, seq_len, F)
 
-    # Verificar diversidade após desnormalização
     print(f"  Variância após desnormalização: {synth_original.var():.6f}")
     print(f"  Range após desnormalização: {synth_original.min():.6f} a {synth_original.max():.6f}")
 
@@ -628,7 +604,6 @@ def check_model_diversity():
     print("VERIFICAÇÃO DE DIVERSIDADE DOS MODELOS")
     print("="*50)
 
-    # Testar com o mesmo ruído
     print("1. Testando com ruído idêntico...")
     z_test = torch.randn(5, SEQUENCE_LEN, Z_dim, device=device)
     z_repeated = z_test.repeat(1, 1, 1)  # Mesmo ruído
@@ -642,7 +617,6 @@ def check_model_diversity():
         print(f"  Variância com ruído idêntico: {x1.var().item():.6f}")
         print(f"  Diferença máxima entre séries: {(x1.max() - x1.min()).item():.6f}")
 
-    # Testar com ruído diferente
     print("\n2. Testando com ruído diferente...")
     z_different = torch.randn(5, SEQUENCE_LEN, Z_dim, device=device)
 
@@ -654,7 +628,6 @@ def check_model_diversity():
         print(f"  Variância com ruído diferente: {x2.var().item():.6f}")
         print(f"  Diferença máxima entre séries: {(x2.max() - x2.min()).item():.6f}")
 
-    # Comparar as duas
     print("\n3. Comparação:")
     with torch.no_grad():
         diff = torch.abs(x1 - x2).mean()
@@ -703,47 +676,40 @@ def plot_statistical_analysis(synthetic_data, feature_idx=0):
     """
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
-    # Preparar dados
     all_values = synthetic_data[:, :, feature_idx].flatten()
     series_means = synthetic_data[:, :, feature_idx].mean(axis=1)
     series_stds = synthetic_data[:, :, feature_idx].std(axis=1)
     series_mins = synthetic_data[:, :, feature_idx].min(axis=1)
     series_maxs = synthetic_data[:, :, feature_idx].max(axis=1)
 
-    # 1. Distribuição de todos os valores
     axes[0, 0].hist(all_values, bins=50, alpha=0.7, density=True, color='skyblue')
     axes[0, 0].set_title('Distribuição de Todos os Valores')
     axes[0, 0].set_xlabel('Valor')
     axes[0, 0].set_ylabel('Densidade')
     axes[0, 0].grid(True, alpha=0.3)
 
-    # 2. Q-Q plot para normalidade
     stats.probplot(all_values, dist="norm", plot=axes[0, 1])
     axes[0, 1].set_title('Q-Q Plot (Normalidade)')
     axes[0, 1].grid(True, alpha=0.3)
 
-    # 3. Distribuição das médias das séries
     axes[0, 2].hist(series_means, bins=30, alpha=0.7, color='lightcoral')
     axes[0, 2].set_title('Distribuição das Médias por Série')
     axes[0, 2].set_xlabel('Média')
     axes[0, 2].set_ylabel('Frequência')
     axes[0, 2].grid(True, alpha=0.3)
 
-    # 4. Distribuição dos desvios padrão
     axes[1, 0].hist(series_stds, bins=30, alpha=0.7, color='lightgreen')
     axes[1, 0].set_title('Distribuição dos Desvios Padrão')
     axes[1, 0].set_xlabel('Desvio Padrão')
     axes[1, 0].set_ylabel('Frequência')
     axes[1, 0].grid(True, alpha=0.3)
 
-    # 5. Box plot dos valores min/max
     box_data = [series_mins, series_maxs]
     axes[1, 1].boxplot(box_data, labels=['Mínimos', 'Máximos'])
     axes[1, 1].set_title('Box Plot: Valores Extremos por Série')
     axes[1, 1].set_ylabel('Valor')
     axes[1, 1].grid(True, alpha=0.3)
 
-    # 6. Evolução temporal média
     mean_evolution = synthetic_data[:, :, feature_idx].mean(axis=0)
     std_evolution = synthetic_data[:, :, feature_idx].std(axis=0)
 
@@ -768,8 +734,7 @@ def plot_autocorrelation_analysis(synthetic_data, feature_idx=0, max_lags=10):
     """
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-    # Calcular autocorrelações para diferentes lags
-    n_series = min(50, len(synthetic_data))  # Usar no máximo 50 séries para eficiência
+    n_series = min(50, len(synthetic_data))
     autocorrs = []
 
     for i in range(n_series):
@@ -785,8 +750,7 @@ def plot_autocorrelation_analysis(synthetic_data, feature_idx=0, max_lags=10):
 
     autocorrs = np.array(autocorrs)
 
-    # 1. Heatmap de autocorrelações
-    sns.heatmap(autocorrs[:20], # Mostrar apenas 20 séries
+    sns.heatmap(autocorrs[:20],
                 annot=False,
                 xticklabels=range(1, max_lags + 1),
                 yticklabels=[f'Série {i+1}' for i in range(min(20, n_series))],
@@ -796,7 +760,6 @@ def plot_autocorrelation_analysis(synthetic_data, feature_idx=0, max_lags=10):
     axes[0, 0].set_title('Autocorrelação por Série')
     axes[0, 0].set_xlabel('Lag')
 
-    # 2. Autocorrelação média
     mean_autocorr = np.nanmean(autocorrs, axis=0)
     std_autocorr = np.nanstd(autocorrs, axis=0)
 
@@ -809,14 +772,12 @@ def plot_autocorrelation_analysis(synthetic_data, feature_idx=0, max_lags=10):
     axes[0, 1].set_ylabel('Autocorrelação')
     axes[0, 1].grid(True, alpha=0.3)
 
-    # 3. Distribuição das autocorrelações lag-1
     axes[1, 0].hist(autocorrs[:, 0], bins=20, alpha=0.7, color='orange')
     axes[1, 0].set_title('Distribuição Autocorrelação Lag-1')
     axes[1, 0].set_xlabel('Autocorrelação')
     axes[1, 0].set_ylabel('Frequência')
     axes[1, 0].grid(True, alpha=0.3)
 
-    # 4. Exemplo de algumas séries individuais
     for i in range(min(5, n_series)):
         axes[1, 1].plot(lags, autocorrs[i], alpha=0.6, marker='o', linewidth=1)
     axes[1, 1].set_title('Autocorrelação: Exemplos Individuais')
@@ -833,7 +794,6 @@ def compare_with_original(synthetic_data, original_data, feature_idx=0, n_compar
     """
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
-    # 1. Séries lado a lado
     for i in range(min(n_comparison, len(synthetic_data), len(original_data))):
         axes[0, 0].plot(original_data[i, :, feature_idx],
                        alpha=0.7, linewidth=1, color='blue')
@@ -864,7 +824,6 @@ def compare_with_original(synthetic_data, original_data, feature_idx=0, n_compar
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3)
 
-    # 3. Estatísticas comparativas
     orig_stats = [orig_values.mean(), orig_values.std(),
                  np.percentile(orig_values, 25), np.percentile(orig_values, 75)]
     synth_stats = [synth_values.mean(), synth_values.std(),
@@ -912,27 +871,20 @@ def print_generation_summary(synthetic_data):
         print(f"  Máximo: {values.max():.6f}")
         print(f"  Mediana: {np.median(values):.6f}")
 
-        # Teste de normalidade
         _, p_value = stats.normaltest(values)
         print(f"  Teste normalidade (p-value): {p_value:.6f}")
 
     print("="*60)
 
-# ==========================
-# EXECUÇÃO PRINCIPAL COM DIAGNÓSTICO
-# ==========================
 
 if __name__ == "__main__":
-    # Configurações
-    N_SYNTHETIC_SERIES = 100  # Número de séries a gerar
-    FEATURE_IDX = 0  # Índice da feature a analisar (0 para 'Close')
+    N_SYNTHETIC_SERIES = 100
+    FEATURE_IDX = 0
 
     print("Iniciando geração de séries temporais sintéticas...")
 
-    # DIAGNÓSTICO: Verificar se os modelos geram diversidade
     check_model_diversity()
 
-    # 1. Gerar séries sintéticas com diferentes configurações
     print("\n" + "="*50)
     print("TESTANDO DIFERENTES CONFIGURAÇÕES")
     print("="*50)
@@ -955,11 +907,9 @@ if __name__ == "__main__":
             temperature=config["temperature"]
         )
 
-        # Calcular diversidade (variância entre séries)
         diversity = np.var([series.var() for series in synthetic_test[:, :, FEATURE_IDX]])
         print(f"  Diversidade (variância das variâncias): {diversity:.6f}")
 
-        # Verificar se séries são idênticas
         first_series = synthetic_test[0, :, FEATURE_IDX]
         identical_count = 0
         for i in range(1, min(10, len(synthetic_test))):
@@ -973,31 +923,27 @@ if __name__ == "__main__":
             best_synthetic = synthetic_test
             print(f"  ✓ Melhor configuração até agora!")
 
-    # 2. Gerar dataset final com a melhor configuração
     if best_synthetic is not None:
         print(f"\nUsando melhor configuração para gerar {N_SYNTHETIC_SERIES} séries...")
         synthetic_series = generate_synthetic_batch(
             N_SYNTHETIC_SERIES, SEQUENCE_LEN,
             add_noise=True,
-            temperature=1.5  # Usar configuração que mostrou melhor diversidade
+            temperature=1.5
         )
     else:
         print("Usando configuração padrão...")
         synthetic_series = generate_synthetic_batch(N_SYNTHETIC_SERIES, SEQUENCE_LEN)
 
-    # 3. Verificação final de diversidade
     print("\n" + "="*50)
     print("VERIFICAÇÃO FINAL DE DIVERSIDADE")
     print("="*50)
 
-    # Calcular estatísticas de diversidade
     series_means = [series[:, FEATURE_IDX].mean() for series in synthetic_series]
     series_stds = [series[:, FEATURE_IDX].std() for series in synthetic_series]
 
     print(f"Diversidade das médias: {np.std(series_means):.6f}")
     print(f"Diversidade dos desvios padrão: {np.std(series_stds):.6f}")
 
-    # Verificar correlações entre séries (devem ser baixas)
     correlations = []
     for i in range(min(10, len(synthetic_series))):
         for j in range(i+1, min(10, len(synthetic_series))):
@@ -1015,33 +961,25 @@ if __name__ == "__main__":
         elif np.mean(correlations) < 0.3:
             print("✓ Boa diversidade - correlações baixas entre séries")
 
-    # 4. Resumo da geração
     print_generation_summary(synthetic_series)
 
-    # 5. Visualizações (apenas se há diversidade suficiente)
-    if np.std(series_means) > 1e-6:  # Threshold mínimo de diversidade
+    if np.std(series_means) > 1e-6:
         print("\nGerando visualizações...")
 
-        # Séries individuais
         print("  - Séries individuais...")
         plot_individual_series(synthetic_series, n_series=12, feature_idx=FEATURE_IDX)
 
-        # Séries sobrepostas
         print("  - Sobreposição de séries...")
         plot_overlay_series(synthetic_series, n_series=50, feature_idx=FEATURE_IDX)
 
-        # Análise estatística
         print("  - Análise estatística...")
         plot_statistical_analysis(synthetic_series, feature_idx=FEATURE_IDX)
 
-        # Análise de autocorrelação
         print("  - Análise de autocorrelação...")
         plot_autocorrelation_analysis(synthetic_series, feature_idx=FEATURE_IDX)
 
-        # Comparação com dados originais (se disponível)
         if 'train_seqs' in globals() and len(train_seqs) > 0:
             print("  - Comparação com dados originais...")
-            # Inverter normalização dos dados originais
             real_2d = train_seqs.reshape(-1, F)
             real_original = scaler.inverse_transform(real_2d).reshape(len(train_seqs), SEQUENCE_LEN, F)
             compare_with_original(synthetic_series, real_original, feature_idx=FEATURE_IDX)
