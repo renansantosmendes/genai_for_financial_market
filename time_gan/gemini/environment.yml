@@ -1,8 +1,48 @@
-name: timegan_env
+name: data-ml-env
 channels:
+  - conda-forge
   - defaults
+  - pytorch
+  - nvidia
 dependencies:
   - python=3.12
   - pip
   - pip:
-    - -r requirements.txt
+      # Web scraping and HTTP requests
+      - beautifulsoup4==4.12.3
+      - requests==2.32.3
+      - curl-cffi==0.13.0
+      - urllib3==2.2.3
+      - websockets==12.0
+
+      # Data analysis and manipulation
+      - pandas==2.2.3
+      - numpy==2.1.1
+
+      # Visualization
+      - matplotlib==3.9.2
+      - seaborn==0.13.2
+
+      # Scientific computing
+      - scipy==1.14.1
+      - sympy==1.13.2
+      - networkx==3.3
+
+      # Machine Learning
+      - scikit-learn==1.5.2
+      - torch==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+      - torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+      - torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+
+      # Database
+      - peewee==3.17.6
+
+      # Financial data
+      - yfinance==0.2.43
+
+      # Image processing
+      - pillow==10.4.0
+
+      # Template engine
+      - jinja2==3.1.4
+      - markupsafe==2.1.5
