@@ -4,7 +4,7 @@ import torch
 from config import SEED
 
 def set_seed():
-    """Define a semente para reprodutibilidade."""
+    """Sets the seed for reproducibility."""
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
@@ -12,14 +12,14 @@ def set_seed():
         torch.cuda.manual_seed_all(SEED)
 
 def to_numpy(seq):
-    """Converte qualquer objeto em numpy 1D"""
+    """Converts any object to a 1D numpy array."""
     if isinstance(seq, torch.Tensor):
         seq = seq.detach().cpu().numpy()
     elif not isinstance(seq, np.ndarray):
         seq = np.array(seq)
 
-    if seq.ndim == 0:  # escalar
+    if seq.ndim == 0:
         seq = np.array([seq])
-    elif seq.ndim > 1:  # mais de 1 dimensão -> achata
+    elif seq.ndim > 1:
         seq = seq.flatten()
     return seq

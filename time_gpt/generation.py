@@ -3,9 +3,7 @@ import numpy as np
 from config import DEVICE, SEQ_LEN, MIN_SIGMA
 
 def generate_series_stochastic(model, init_series_scaled, future_steps=200, temp=1.0):
-    """
-    Gera uma série temporal estocástica a partir de uma série inicial.
-    """
+    """Generates a stochastic time series from an initial series."""
     model.eval()
     generated = list(init_series_scaled)
     with torch.no_grad():

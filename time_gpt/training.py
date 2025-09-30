@@ -5,16 +5,14 @@ from tqdm import tqdm
 from config import DEVICE, EPOCHS, LR
 
 def nll_gaussian(y_true, mu, sigma):
-    """Calcula a Negative Log-Likelihood para uma distribuição Gaussiana."""
-    # y_true, mu, sigma shapes: (batch, seq_len)
-    # NLL: 0.5*ln(2πσ^2) + (y-μ)^2/(2σ^2)
+    """Calculates the Negative Log-Likelihood for a Gaussian distribution."""
     var = sigma**2
     return torch.mean(0.5 * torch.log(2 * np.pi * var) + ((y_true - mu)**2) / (2 * var))
 
 def train_model(model, loader):
-    """Executa o loop de treinamento do modelo."""
+    """Executes the model training loop."""
     optimizer = optim.Adam(model.parameters(), lr=LR)
-    print("Começando treinamento...")
+    print("Starting training...")
     for epoch in range(1, EPOCHS + 1):
         model.train()
         running_loss = 0.0
@@ -28,5 +26,5 @@ def train_model(model, loader):
             optimizer.step()
             running_loss += loss.item() * xb.size(0)
         epoch_loss = running_loss / len(loader.dataset)
-        print(f"Epoch {epoch}/{EPOCHS} - Loss NLL: {epoch_loss:.6f}")
-    print("Treinamento finalizado.")
+        print(f"Epoch {epoch}/{EPOCHS} - NLL Loss: {epoch_loss:.6f}")
+    print("Training finished.")
