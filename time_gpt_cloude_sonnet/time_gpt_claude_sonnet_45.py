@@ -220,10 +220,10 @@ def treinar_modelo(model, train_loader, val_loader, epochs=100, lr=0.01):
                 f'Epoch [{epoch + 1}/{epochs}], Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}, LR: {optimizer.param_groups[0]["lr"]:.6f}')
 
         # Early stopping
-        # early_stopping(val_loss)
-        # if early_stopping.early_stop:
-        #     print(f"\nEarly stopping na época {epoch+1}")
-        #     break
+        early_stopping(val_loss)
+        if early_stopping.early_stop:
+            print(f"\nEarly stopping na época {epoch + 1}")
+            break
 
     # Carregar melhor modelo
     if best_model_state is not None:
@@ -379,7 +379,7 @@ def main():
     TICKER = 'AAPL'
     SEQ_LEN = 60
     PRED_LEN = 5
-    BATCH_SIZE = 64
+    BATCH_SIZE = 32
     EPOCHS = 100
 
     # Carregar dados
@@ -452,14 +452,15 @@ def main():
     plotar_resultados_completos(predictions, actuals, serie_futura, dados,
                                 train_losses, val_losses, val_dataset)
 
-    # Salvar modelo
+    # Salvar modelo (com compatibilidade PyTorch 2.6+)
+    print("\nSalvando modelo...")
     torch.save({
         'model_state_dict': model.state_dict(),
         'scaler': val_dataset.scaler,
         'seq_len': SEQ_LEN,
         'pred_len': PRED_LEN
-    }, 'timegpt_model.pth')
-    print("\nModelo salvo como 'timegpt_model.pth'")
+    }, 'timegpt_model.pth', _use_new_zipfile_serialization=True)
+    print("✓ Modelo salvo como 'timegpt_model.pth'")
 
 
 if __name__ == "__main__":
